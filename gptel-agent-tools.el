@@ -498,6 +498,9 @@ Signals:
   (unless (file-readable-p path)
     (error "Error: File or directory %s is not readable" path))
 
+  (unless new-str-or-diff
+    (error "Required argument `new_str' missing."))
+
   (if (or (eq diffp :json-false) old-str)
       ;; Replacement by Text
       (progn

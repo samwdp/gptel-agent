@@ -1157,28 +1157,31 @@ Consider using the more granular tools \"insert_in_file\" or \"edit_files\" firs
 - You can call multiple tools in a single response.  It is always better to
   speculatively perform multiple searches in parallel if they are potentially useful."
  :function (lambda (pattern &optional path depth)
+             (when (string-empty-p pattern)
+               (error "Error: pattern must not be empty"))
              (if path
                  (unless (and (file-readable-p path) (file-directory-p path))
                    (error "Error: path %s is not readable" path))
                (setq path "."))
              (unless (executable-find "tree")
                (error "Error: Executable `tree` not found.  This tool cannot be used"))
-             (with-temp-buffer
-               (let* ((args (list "-l" "-f" "-i" "-I" ".git"
-                                  "--sort=mtime" "--ignore-case"
-                                  "--prune" "-P" pattern path))
-                      (args (if (natnump depth)
-                                (nconc args '("-L" (number-to-string depth)))
-                              args))
-                      (exit-code (apply #'call-process "tree" nil t nil args)))
-                 (when (/= exit-code 0)
-                   (goto-char (point-min))
-                   (insert (format "glob_files failed with exit code %d\n.STDOUT:\n\n"
-                                   exit-code))))
-               (buffer-string)))
+             (let ((full-path (expand-file-name path)))
+               (with-temp-buffer
+                 (let* ((args (list "-l" "-f" "-i" "-I" ".git"
+                                    "--sort=mtime" "--ignore-case"
+                                    "--prune" "-P" pattern full-path))
+                        (args (if (natnump depth)
+                                  (nconc args '("-L" (number-to-string depth)))
+                                args))
+                        (exit-code (apply #'call-process "tree" nil t nil args)))
+                   (when (/= exit-code 0)
+                     (goto-char (point-min))
+                     (insert (format "glob_files failed with exit code %d\n.STDOUT:\n\n"
+                                     exit-code))))
+                 (buffer-string))))
  :args '(( :name "pattern"
            :type string
-           :description "Glob pattern to match, for example \"*.el\"
+           :description "Glob pattern to match, for example \"*.el\". Must not be empty.
 Use \"*\" to list all files in a directory.")
          ( :name "path"
            :type string

@@ -212,6 +212,14 @@ Signals an error if:
                               :object-type 'plist
                               :object-key-type 'keyword
                               :sequence-type 'list)))
+            (let ((tail parsed-yaml))
+              (while tail
+                (let ((key (pop tail))
+                      (val (pop tail)))
+                  (pcase key
+                    ((or :pre :post) (plist-put parsed-yaml key (eval (read val))))
+                    (:parents (plist-put parsed-yaml key
+                                         (mapcar #'intern (ensure-list (read val)))))))))
 
             ;; Validate all keys in the parsed YAML
             (let ((current-plist parsed-yaml))
@@ -295,6 +303,15 @@ Signals an error if:
 
                 ;; Add to plist
                 (setq props-plist (plist-put props-plist key-sym value)))))
+
+          (let ((tail props-plist))
+            (while tail
+              (let ((key (pop tail))
+                    (val (pop tail)))
+                (pcase key
+                  ((or :pre :post) (plist-put props-plist key (eval (read val))))
+                  (:parents (plist-put props-plist key
+                                       (mapcar #'intern (ensure-list (read val)))))))))
 
           (if (not templates)
               props-plist

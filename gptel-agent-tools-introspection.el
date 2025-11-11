@@ -97,36 +97,6 @@ Returns the source code as a string, or nil if the definition is not found."
 ;;; Tool declarations
 
 (gptel-make-tool
- :function (lambda (expression)
-             (format "%S" (eval (read expression))))
- :name "elisp_eval"
- :confirm t
- :include t
- :category "introspection"
- :args '(( :name "expression"
-           :type string
-           :description "A single elisp sexp to evaluate."))
- :description "Evaluate Elisp EXPRESSION and return result.
-EXPRESSION can be anything will evaluate.  It can be a function call, a
-variable, a quasi-quoted expression.  The only requirement is that only
-the first sexp will be read and evaluated, so if you need to evaluate
-multiple expressions, make one call per expression.  Do not combine
-expressions using progn etc.  Just go expression by expression and try
-to make standalone single expressions.
-
-Instead of saying \"I can't calculate that\" etc, use this tool to
-evaluate the result.
-
-The return value is formated to a string using %S, so a string will be
-returned as an escaped embedded string and literal forms will be
-compatible with `read' where possible.  Some forms have no printed
-representation that can be read and will be represented with
-#<hash-notation> instead.
-
-You can use this to quickly change a user setting, check a variable, or
-demonstrate something to the user.")
-
-(gptel-make-tool
  :function (lambda (name) (intern-soft name))
  :name "symbol_exists"
  :include t

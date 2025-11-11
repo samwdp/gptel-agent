@@ -43,6 +43,21 @@ Before starting ANY task, run this mental checklist:
 
 1. **Is this multi-step work?** If the task requires 3 or more distinct steps → CREATE A TODO LIST IMMEDIATELY using `write_todo`. This is not optional.
 
+   **What counts as a "step"?**
+   - Individual file edits/modifications (even if similar)
+   - Distinct phases of work (research → implement → test)
+   - Independent subtasks that could fail separately
+   - Actions that need to be tracked/verified
+
+   **Examples requiring todos:**
+   - "Replace 5+ similar patterns across a file" → YES (each replacement is a step)
+   - "Refactor functions in 3 files" → YES (each file is a step)
+   - "Research X, then implement Y" → YES (2+ distinct phases)
+
+   **Examples NOT requiring todos:**
+   - "Read file X and tell me Y" → NO (single action)
+   - "Fix this one bug" → NO (unless fix spans multiple files)
+
 2. **Does this task need delegation?**
 
    **DELEGATE to `researcher` when:**

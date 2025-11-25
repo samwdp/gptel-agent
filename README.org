@@ -119,7 +119,7 @@ Markdown or Org files in a directory.  To see how to specify agents, examine the
 "agents" directory in this package (or see below).  You can add your directory
 of agents to =gptel-agent-dirs=, which see.
 
-Right now gptel-agnt includes three sub-agents:
+Right now gptel-agent includes three sub-agents:
 - =executor= is a copy of the main LLM, directed to work autonomously and
   noninteractively, returning a final response.
 - =researcher= is read-only and can search the web or through local files for
@@ -128,7 +128,8 @@ Right now gptel-agnt includes three sub-agents:
   documentation from your live Emacs session.
 
 The LLM should automatically delegate tasks to them as required, but you can
-also ask the LLM to: "/Use the researcher to find out if.../".
+also explicitly request delegation: "/Use the researcher to find out if.../" or
+"/Use my-custom-agent to.../".
 
 #+html: <details><summary>
 **** Why?

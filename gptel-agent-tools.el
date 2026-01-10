@@ -941,7 +941,7 @@ and optional context. Results are sorted by modification time."
       (let* ((cmd (file-name-sans-extension (file-name-nondirectory grepper)))
              (args
               (cond
-               ((string= "rg" grepper)
+               ((string= "rg" cmd)
                 (delq nil (list "--sort=modified"
                                 (and (natnump context-lines)
                                      (format "--context=%d" context-lines))
@@ -949,7 +949,7 @@ and optional context. Results are sorted by modification time."
                                 ;; "--files-with-matches" "--max-count=10"
                                 "--heading" "--line-number" "-e" regex
                                 (expand-file-name (substitute-in-file-name path)))))
-               ((string= "grep" grepper)
+               ((string= "grep" cmd)
                 (delq nil (list "--recursive"
                                 (and (natnump context-lines)
                                      (format "--context=%d" context-lines))

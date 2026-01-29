@@ -224,27 +224,70 @@ ARG-VALUES is the list of arguments for the tool call."
 (defun gptel-agent--execute-bash (callback command)
   "Execute COMMAND asynchronously in bash and call CALLBACK with output.
 
-CALLBACK is called with the command output string when the process finishes.
-COMMAND is the bash command string to execute."
+  CALLBACK is called with the command output string when the process finishes.
+  COMMAND is the bash command string to execute."
   (let* ((output-buffer (generate-new-buffer " *gptel-agent-bash*"))
-         (proc (make-process
-                :name "gptel-agent-bash"
-                :buffer output-buffer
-                :command (list "bash" "-c" command)
-                :connection-type 'pipe
-                :sentinel
-                (lambda (process _event)
-                  (when (memq (process-status process) '(exit signal))
-                    (let* ((exit-code (process-exit-status process))
-                           (output (with-current-buffer (process-buffer process)
-                                     (buffer-string))))
-                      (kill-buffer (process-buffer process))
-                      (funcall callback
-                               (if (zerop exit-code)
-                                   output
-                                 (format "Command failed with exit code %d:\nSTDOUT+STDERR:\n%s"
-                                         exit-code output)))))))))
+	     (proc (make-process
+		        :name "gptel-agent-bash"
+		        :buffer output-buffer
+		        :command (list "bash" "-c" command)
+		        :connection-type 'pipe
+		        :sentinel
+		        (lambda (process _event)
+		          (when (memq (process-status process) '(exit signal))
+		            (let* ((exit-code (process-exit-status process))
+			               (output (with-current-buffer (process-buffer process)
+							         (buffer-string))))
+		              (kill-buffer (process-buffer process))
+		              (funcall callback
+				               (if (zerop exit-code)
+				                   output
+				                 (format "Command failed with exit code %d:\nSTDOUT+STDERR:\n%s"
+					                     exit-code output)))))))))
     proc))
+
+(defun gptel-agent--execute-powershell-preview-setup (arg-values _info)
+  "Setup preview overlay for Powershell command execution tool call.
+
+  ARG-VALUES is the list of arguments for the tool call."
+  (let ((command (car arg-values))
+	    (from (point)) (inner-from))
+    (insert
+     "(" (propertize "Powershell" 'font-lock-face 'font-lock-keyword-face)
+     ")\n")
+    (setq inner-from (point))
+    (insert command)
+    (gptel-agent--fontify-block 'sh-mode inner-from (point))
+    (insert "\n\n")
+    (font-lock-append-text-property
+     inner-from (1- (point)) 'font-lock-face (gptel-agent--block-bg))
+    (gptel-agent--confirm-overlay from (point) t)))
+
+(defun gptel-agent--execute-powershell (callback command)
+  "Execute COMMAND asynchronously in powershell and call CALLBACK with output.
+
+  CALLBACK is called with the command output string when the process finishes.
+  COMMAND is the powershell command string to execute."
+  (let* ((output-buffer (generate-new-buffer " *gptel-agent-powershell*"))
+	     (proc (make-process
+		        :name "gptel-agent-powershell"
+		        :buffer output-buffer
+		        :command (list "pwsh" "-nol" command)
+		        :connection-type 'pipe
+		        :sentinel
+		        (lambda (process _event)
+		          (when (memq (process-status process) '(exit signal))
+		            (let* ((exit-code (process-exit-status process))
+			               (output (with-current-buffer (process-buffer process)
+							         (buffer-string))))
+		              (kill-buffer (process-buffer process))
+		              (funcall callback
+				               (if (zerop exit-code)
+				                   output
+				                 (format "Command failed with exit code %d:\nSTDOUT+STDERR:\n%s"
+					                     exit-code output)))))))))
+    proc))
+
 
 ;;; Web tools
 
@@ -306,7 +349,7 @@ COUNT is the number of results to return (default 5)."
   (setq gptel-agent--web-search-active
         (cl-delete-if-not
          (lambda (buf) (and (buffer-live-p buf)
-                       (process-live-p (get-buffer-process buf))))
+                            (process-live-p (get-buffer-process buf))))
          gptel-agent--web-search-active))
   (if (>= (length gptel-agent--web-search-active) 2)
       (progn (message "Web search: waiting for turn")
@@ -621,7 +664,7 @@ diagnostics."
       (insert
        "(" (propertize description 'font-lock-face 'font-lock-keyword-face)
        " " (mapconcat (lambda (f) (propertize (concat "\"" f "\"")
-                                         'font-lock-face 'font-lock-constant-face))
+                                              'font-lock-face 'font-lock-constant-face))
                       files-affected " ")
        ")\n"))
     (gptel-agent--confirm-overlay from (point) t)))
@@ -1335,6 +1378,7 @@ Error details: %S"
                `(("Write"     ,#'gptel-agent--write-file-preview-setup)
                  ("Eval"     ,#'gptel-agent--eval-elisp-preview-setup)
                  ("Bash"   ,#'gptel-agent--execute-bash-preview-setup)
+                 ("Powershell"   ,#'gptel-agent--execute-powershell-preview-setup)
                  ("Edit"     ,#'gptel-agent--edit-files-preview-setup)
                  ("Insert" ,#'gptel-agent--insert-in-file-preview-setup)
                  ("Agent"     ,#'gptel-agent--task-preview-setup)))
@@ -1375,6 +1419,41 @@ returned as a string.  Long outputs should be filtered/limited using pipes."
            :description "The Bash command to execute.  \
 Can include pipes and standard shell operators.
 Example: 'ls -la | head -20' or 'grep -i error app.log | tail -50'"))
+ :category "gptel-agent"
+ :confirm t
+ :include t
+ :async t)
+
+(gptel-make-tool
+ :name "Powershell"
+ :function #'gptel-agent--execute-powershell
+ :description "Execute Powershell commands.
+
+This tool provides access to a Powershell shell with some GNU coreutils installed.
+Use this to inspect system state, run builds, tests or other development or system administration tasks.
+
+Do NOT use this for file operations, finding, reading or editing files.
+Use the provided file tools instead: `Read`, `Write`, `Edit`, \
+`Glob`, `Grep`
+
+- Quote file paths with spaces using double quotes.
+- Chain dependent commands with && (or ; if failures are OK)
+- Use absolute paths instead of cd when possible
+- For parallel commands, make multiple `Powershell` calls in one message
+- Run tests, check your work or otherwise close the loop to verify changes you make.
+
+EXAMPLES:
+- List files with details: 'ls /path/to/dir'
+- Find recent errors: 'rg \"error\" /var/log/app.log | Get-Content -Last 20'
+- Check file type: 'file document.pdf'
+
+The command will be executed in the current working directory.  Output is
+returned as a string.  Long outputs should be filtered/limited using pipes."
+ :args '(( :name "command"
+           :type string
+           :description "The Powershell command to execute.  \
+Can include pipes and standard shell operators.
+Example: 'grep -i error app.log | Get-Content -Last 10'"))
  :category "gptel-agent"
  :confirm t
  :include t
